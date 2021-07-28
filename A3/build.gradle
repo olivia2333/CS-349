@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.9'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // other libraries could be placed here e.g. unit testing framework
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile 'org.apache.pdfbox:pdfbox:2.0.22'
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(15))
+    }
+}
+
+application {
+    mainClassName = 'main'
+}
+
+javafx {
+    version = "11.0.2"
+    modules = ['javafx.controls', 'javafx.fxml', 'javafx.graphics', 'javafx.media', 'javafx.base', 'javafx.swing']
+}

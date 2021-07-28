@@ -4,17 +4,46 @@ import javafx.scene.image.Image;
 import javafx.scene.transform.Affine;
 import javafx.scene.transform.NonInvertibleTransformException;
 
-public class upper_arm extends Sprite{
-    private double x, y, w, h;
-    private Image image;
+public class UpperArm extends Sprite{
 
-    private void initialize(double width, double height, boolean left){
+    public UpperArm(double start_x, double start_y, int width, int height, boolean left){
+        super();
+        this.initialize(start_x, start_y, width, height, left);
+    }
+
+    private void initialize(double start_x, double start_y, double width, double height, boolean left){
         x = 0;
         y = 0;
+        sx = start_x;
+        sy = start_y;
         w = width;
         h = height;
-        if (left) image = new Image("left_upper_arm.png");
-        else image = new Image("right_upper_arm.png");
+        if (left) {
+            image = new Image("left_upper_arm.png");
+            pivot = new Point2D(x+w, y + 20);
+            initial_pivot = new Point2D(x+w, y + 20);
+        }
+        else {
+            image = new Image("right_upper_arm.png");
+            pivot = new Point2D(x+5, y+20);
+            initial_pivot = new Point2D(x+5, y+20);
+        }
+        this.left = left;
+    }
+
+    @Override
+    public Point2D get_pivot() {
+        return getFullMatrix().transform(pivot);
+    }
+
+    @Override
+    protected boolean valid_rotation() {
+        return true;
+    }
+
+    @Override
+    protected String get_type() {
+        return "upper_arm";
     }
 
     @Override
@@ -37,6 +66,24 @@ public class upper_arm extends Sprite{
 
     @Override
     protected void draw(GraphicsContext gc) {
+        // save the current graphics context so that we can restore later
+        Affine oldMatrix = gc.getTransform();
+
+        // make sure we have the correct transformations for this shape
+        gc.setTransform(getFullMatrix());
+        gc.drawImage(image, x, y, w, h);
+
+        // draw children
+        for (Sprite child : children) {
+            child.draw(gc);
+        }
+
+        // set back to original value since we're done with this branch of the scene graph
+        gc.setTransform(oldMatrix);
+    }
+
+    @Override
+    protected void rotate(GraphicsContext gc) {
         // save the current graphics context so that we can restore later
         Affine oldMatrix = gc.getTransform();
 
