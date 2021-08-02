@@ -7,7 +7,6 @@ import android.util.Log;
 import android.util.Pair;
 import android.view.MotionEvent;
 import android.widget.ImageView;
-
 import java.util.ArrayList;
 
 @SuppressLint("AppCompatCustomView")
@@ -66,174 +65,172 @@ public class PDFimage extends ImageView {
         if (MainActivity.erase){
             erase = false;
         }
-        if (MainActivity.draw || MainActivity.highlight || MainActivity.erase || MainActivity.touch) {
-            if (MainActivity.draw){
-                paths = paths1;
-            } else {
-                paths = paths2;
-            }
-            switch(event.getPointerCount()) {
-                // 1 point is drawing or erasing
-                case 1:
-                    p1_id = event.getPointerId(0);
-                    p1_index = event.findPointerIndex(p1_id);
+        if (MainActivity.draw){
+            paths = paths1;
+        } else {
+            paths = paths2;
+        }
+        switch(event.getPointerCount()) {
+            // 1 point is drawing or erasing
+            case 1:
+                p1_id = event.getPointerId(0);
+                p1_index = event.findPointerIndex(p1_id);
 
-                    // invert using the current matrix to account for pan/scale
-                    // inverts in-place and returns boolean
-                    inverse = new Matrix();
-                    matrix.invert(inverse);
+                // invert using the current matrix to account for pan/scale
+                // inverts in-place and returns boolean
+                inverse = new Matrix();
+                matrix.invert(inverse);
 
-                    // mapPoints returns values in-place
-                    float[] inverted = new float[] { event.getX(p1_index), event.getY(p1_index) };
-                    inverse.mapPoints(inverted);
-                    x1 = inverted[0];
-                    y1 = inverted[1];
+                // mapPoints returns values in-place
+                float[] inverted = new float[] { event.getX(p1_index), event.getY(p1_index) };
+                inverse.mapPoints(inverted);
+                x1 = inverted[0];
+                y1 = inverted[1];
 
-                    switch (event.getAction()) {
-                        case MotionEvent.ACTION_DOWN:
-                            Log.d(LOGNAME, "Action down");
-                            if (MainActivity.draw || MainActivity.highlight) {
-                                path = new Path();
-                                Pair<Path, Integer> p = new Pair<>(path, MainActivity.curr_page);
-                                paths.add(p);
-                                Overall.add(p);
-                                path.moveTo(x1, y1);
-                            } else if (MainActivity.erase) {
-                                erase = Remove(x1, y1);
-                            } else if (MainActivity.touch){
-                                p = new ArrayList<>();
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        Log.d(LOGNAME, "Action down");
+                        if (MainActivity.draw || MainActivity.highlight) {
+                            path = new Path();
+                            Pair<Path, Integer> p = new Pair<>(path, MainActivity.curr_page);
+                            paths.add(p);
+                            Overall.add(p);
+                            path.moveTo(x1, y1);
+                        } else if (MainActivity.erase) {
+                            erase = Remove(x1, y1);
+                        } else if (MainActivity.touch){
+                            p = new ArrayList<>();
+                            p.add(new Pair<>(x1, y1));
+                        }
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        if (MainActivity.draw || MainActivity.highlight) {
+                            Log.d(LOGNAME, "Action move");
+                            path.lineTo(x1, y1);
+                        } else if (MainActivity.erase && !erase) {
+                            erase = Remove(x1, y1);
+                        } else if (MainActivity.touch){
+                            float dx = x1 - p.get(0).first;
+                            float dy = y1 - p.get(0).second;
+                            Log.d(LOGNAME, "translate: " + dx + "," + dy + " " + (total_dx + dx) + " " + (total_dy + dy) );
+                            if (Math.abs(dx / total_sx) >= 15 && Math.abs(dy / total_sy) >= 15 &&
+                            Math.abs(total_dx + dx) <= 800 && Math.abs(total_dy + dy) <= 1000) {
+                                total_dx += dx;
+                                total_dy += dy;
+                                matrix.preTranslate(dx, dy);
+                                Log.d(LOGNAME, "translate: " + dx + "," + dy + " total: " + total_dx + " " + total_dy);
+                                p.remove(0);
                                 p.add(new Pair<>(x1, y1));
                             }
-                            break;
-                        case MotionEvent.ACTION_MOVE:
-                            if (MainActivity.draw || MainActivity.highlight) {
-                                Log.d(LOGNAME, "Action move");
-                                path.lineTo(x1, y1);
-                            } else if (MainActivity.erase && !erase) {
-                                erase = Remove(x1, y1);
-                            } else if (MainActivity.touch){
-                                float dx = x1 - p.get(0).first;
-                                float dy = y1 - p.get(0).second;
-                                Log.d(LOGNAME, "translate: " + dx + "," + dy + " " + (total_dx + dx) + " " + (total_dy + dy) );
-                                if (Math.abs(dx / total_sx) >= 15 && Math.abs(dy / total_sy) >= 15 &&
-                                Math.abs(total_dx + dx) <= 800 && Math.abs(total_dy + dy) <= 1000) {
-                                    total_dx += dx;
-                                    total_dy += dy;
-                                    matrix.preTranslate(dx, dy);
-                                    Log.d(LOGNAME, "translate: " + dx + "," + dy + " total: " + total_dx + " " + total_dy);
-                                    p.remove(0);
-                                    p.add(new Pair<>(x1, y1));
-                                }
-                            }
-                            break;
-                        case MotionEvent.ACTION_UP:
-                            if (!MainActivity.erase){
-                                Log.d(LOGNAME, "Action up");
-                            }
-                            if (MainActivity.draw || MainActivity.highlight){
-                                String type;
-                                if (MainActivity.draw){
-                                    type = "erase_draw";
-                                } else {
-                                    type = "erase_highlight";
-                                }
-                                MainActivity.manager.new_event(new Pair<>(new Pair<>(path, MainActivity.curr_page),
-                                        type));
-                            }
-                            break;
-                    }
-                    break;
-                // 2 points is zoom/pan
-                case 2:
-                    // point 1
-                    p1_id = event.getPointerId(0);
-                    p1_index = event.findPointerIndex(p1_id);
-
-                    // mapPoints returns values in-place
-                    inverted = new float[] { event.getX(p1_index), event.getY(p1_index) };
-                    inverse.mapPoints(inverted);
-
-                    // first pass, initialize the old == current value
-                    if (old_x1 < 0 || old_y1 < 0) {
-                        old_x1 = x1 = inverted[0];
-                        old_y1 = y1 = inverted[1];
-                    } else {
-                        old_x1 = x1;
-                        old_y1 = y1;
-                        x1 = inverted[0];
-                        y1 = inverted[1];
-                    }
-
-                    // point 2
-                    p2_id = event.getPointerId(1);
-                    p2_index = event.findPointerIndex(p2_id);
-
-                    // mapPoints returns values in-place
-                    inverted = new float[] { event.getX(p2_index), event.getY(p2_index) };
-                    inverse.mapPoints(inverted);
-
-                    // first pass, initialize the old == current value
-                    if (old_x2 < 0 || old_y2 < 0) {
-                        old_x2 = x2 = inverted[0];
-                        old_y2 = y2 = inverted[1];
-                    } else {
-                        old_x2 = x2;
-                        old_y2 = y2;
-                        x2 = inverted[0];
-                        y2 = inverted[1];
-                    }
-
-                    // midpoint
-                    mid_x = (x1 + x2) / 2;
-                    mid_y = (y1 + y2) / 2;
-                    old_mid_x = (old_x1 + old_x2) / 2;
-                    old_mid_y = (old_y1 + old_y2) / 2;
-
-                    // distance
-                    float d_old = (float) Math.sqrt(Math.pow((old_x1 - old_x2), 2) + Math.pow((old_y1 - old_y2), 2));
-                    float d = (float) Math.sqrt(Math.pow((x1 - x2), 2) + Math.pow((y1 - y2), 2));
-
-                    // pan and zoom during MOVE event
-                    if (event.getAction() == MotionEvent.ACTION_MOVE) {
-                        Log.d(LOGNAME, "Multitouch move");
-                        // pan == translate of midpoint
-                        float dx = mid_x - old_mid_x;
-                        float dy = mid_y - old_mid_y;
-                        matrix.preTranslate(dx, dy);
-                        Log.d(LOGNAME, "translate: " + dx + "," + dy);
-
-                        // zoom == change of spread between p1 and p2
-                        float scale = d/d_old;
-                        scale = Math.max(0, scale);
-                        if (scale * total_sx <= 3 && scale * total_sy <= 3 &&
-                        scale * total_sx >= 0.5 && scale * total_sy >= 0.5) {
-                            matrix.preScale(scale, scale, mid_x, mid_y);
-                            total_sx *= scale;
-                            total_sy *= scale;
-                            Log.d(LOGNAME, "scale: " + scale + " total: " + total_sx + " " + total_sy);
                         }
+                        break;
+                    case MotionEvent.ACTION_UP:
+                        if (!MainActivity.erase){
+                            Log.d(LOGNAME, "Action up");
+                        }
+                        if (MainActivity.draw || MainActivity.highlight){
+                            String type;
+                            if (MainActivity.draw){
+                                type = "erase_draw";
+                            } else {
+                                type = "erase_highlight";
+                            }
+                            MainActivity.manager.new_event(new Pair<>(new Pair<>(path, MainActivity.curr_page),
+                                    type));
+                        }
+                        break;
+                }
+                break;
+            // 2 points is zoom/pan
+            case 2:
+                // point 1
+                p1_id = event.getPointerId(0);
+                p1_index = event.findPointerIndex(p1_id);
 
-                        // reset on up
-                    } else if (event.getAction() == MotionEvent.ACTION_UP) {
-                        old_x1 = -1f;
-                        old_y1 = -1f;
-                        old_x2 = -1f;
-                        old_y2 = -1f;
-                        old_mid_x = -1f;
-                        old_mid_y = -1f;
+                // mapPoints returns values in-place
+                inverted = new float[] { event.getX(p1_index), event.getY(p1_index) };
+                inverse.mapPoints(inverted);
+
+                // first pass, initialize the old == current value
+                if (old_x1 < 0 || old_y1 < 0) {
+                    old_x1 = x1 = inverted[0];
+                    old_y1 = y1 = inverted[1];
+                } else {
+                    old_x1 = x1;
+                    old_y1 = y1;
+                    x1 = inverted[0];
+                    y1 = inverted[1];
+                }
+
+                // point 2
+                p2_id = event.getPointerId(1);
+                p2_index = event.findPointerIndex(p2_id);
+
+                // mapPoints returns values in-place
+                inverted = new float[] { event.getX(p2_index), event.getY(p2_index) };
+                inverse.mapPoints(inverted);
+
+                // first pass, initialize the old == current value
+                if (old_x2 < 0 || old_y2 < 0) {
+                    old_x2 = x2 = inverted[0];
+                    old_y2 = y2 = inverted[1];
+                } else {
+                    old_x2 = x2;
+                    old_y2 = y2;
+                    x2 = inverted[0];
+                    y2 = inverted[1];
+                }
+
+                // midpoint
+                mid_x = (x1 + x2) / 2;
+                mid_y = (y1 + y2) / 2;
+                old_mid_x = (old_x1 + old_x2) / 2;
+                old_mid_y = (old_y1 + old_y2) / 2;
+
+                // distance
+                float d_old = (float) Math.sqrt(Math.pow((old_x1 - old_x2), 2) + Math.pow((old_y1 - old_y2), 2));
+                float d = (float) Math.sqrt(Math.pow((x1 - x2), 2) + Math.pow((y1 - y2), 2));
+
+                // pan and zoom during MOVE event
+                if (event.getAction() == MotionEvent.ACTION_MOVE) {
+                    Log.d(LOGNAME, "Multitouch move");
+                    // pan == translate of midpoint
+                    float dx = mid_x - old_mid_x;
+                    float dy = mid_y - old_mid_y;
+                    matrix.preTranslate(dx, dy);
+                    Log.d(LOGNAME, "translate: " + dx + "," + dy);
+
+                    // zoom == change of spread between p1 and p2
+                    float scale = d/d_old;
+                    scale = Math.max(0, scale);
+                    if (scale * total_sx <= 3 && scale * total_sy <= 3 &&
+                    scale * total_sx >= 0.5 && scale * total_sy >= 0.5) {
+                        matrix.preScale(scale, scale, mid_x, mid_y);
+                        total_sx *= scale;
+                        total_sy *= scale;
+                        Log.d(LOGNAME, "scale: " + scale + " total: " + total_sx + " " + total_sy);
                     }
-                    break;
-                // I have no idea what the user is doing for 3+ points
-                default:
-                    break;
-            }
-            return true;
+
+                    // reset on up
+                } else if (event.getAction() == MotionEvent.ACTION_UP) {
+                    old_x1 = -1f;
+                    old_y1 = -1f;
+                    old_x2 = -1f;
+                    old_y2 = -1f;
+                    old_mid_x = -1f;
+                    old_mid_y = -1f;
+                }
+                break;
+            // I have no idea what the user is doing for 3+ points
+            default:
+                break;
         }
         return true;
     }
 
     // set image as background
     public void setImage(Bitmap bitmap) {
+        matrix = new Matrix();
         this.bitmap = bitmap;
     }
 
