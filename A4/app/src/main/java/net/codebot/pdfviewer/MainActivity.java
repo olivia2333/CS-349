@@ -22,6 +22,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+import static net.codebot.pdfviewer.R.id.redo;
+
 // PDF sample code from
 // https://medium.com/@chahat.jain0/rendering-a-pdf-document-in-android-activity-fragment-using-pdfrenderer-442462cb8f9a
 // Issues about cache etc. are not at all obvious from documentation, so we should expect people to need this.
@@ -33,6 +35,8 @@ public class MainActivity extends AppCompatActivity {
     final String FILENAME = "personal_reflection_final.pdf";
     final int FILERESID = R.raw.personal_reflection_final;
     final static UndoManager manager = new UndoManager();
+    static ImageButton pageUp, pageDown;
+    static RadioButton Undo, Redo;
 
     // manage the pages of the PDF, see below
     PdfRenderer pdfRenderer;
@@ -74,8 +78,12 @@ public class MainActivity extends AppCompatActivity {
             Log.d(LOGNAME, "Error opening PDF");
         }
 
-        ImageButton pageUp = findViewById(R.id.pageUp);
-        ImageButton pageDown = findViewById(R.id.pageDown);
+        pageUp = findViewById(R.id.pageUp);
+        pageDown = findViewById(R.id.pageDown);
+        Undo = findViewById(R.id.undo);
+        Redo = findViewById(R.id.redo);
+        update();
+
         pageUp.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -84,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
                     curr_page--;
                     showPage(curr_page - 1);
                 }
+                update();
             }
         });
         pageDown.setOnClickListener(new View.OnClickListener() {
@@ -94,8 +103,35 @@ public class MainActivity extends AppCompatActivity {
                     curr_page++;
                     showPage(curr_page - 1);
                 }
+                update();
             }
         });
+    }
+
+    public static void update(){
+        if (curr_page == 1){
+            pageUp.setEnabled(false);
+        } else {
+            pageUp.setEnabled(true);
+        }
+
+        if (curr_page == 3){
+            pageDown.setEnabled(false);
+        } else {
+            pageDown.setEnabled(true);
+        }
+
+        if (manager.canUndo()){
+            Undo.setEnabled(true);
+        } else {
+            Undo.setEnabled(false);
+        }
+
+        if (manager.canRedo()){
+            Redo.setEnabled(true);
+        } else {
+            Redo.setEnabled(false);
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -243,30 +279,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 break;
         }
+        update();
     }
 
-    @SuppressLint("NonConstantResourceId")
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
-    public void onPageButtonClicked(View view) {
-        boolean checked = view.callOnClick();
-        System.out.println(checked);
-        switch (view.getId()) {
-            case R.id.pageDown:
-                if (checked) {
-                    if (curr_page < 3){
-                        curr_page++;
-                        showPage(curr_page - 1);
-                    }
-                }
-                break;
-            case R.id.pageUp:
-                if (checked){
-                    if (curr_page > 1){
-                        curr_page--;
-                        showPage(curr_page - 1);
-                    }
-                }
-                break;
-        }
-    }
 }

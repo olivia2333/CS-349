@@ -13,6 +13,7 @@ public class UndoManager {
             redo.clear();
         }
         undo.push(p);
+        MainActivity.update();
     }
 
     public Pair<Pair<Path, Integer>, String> setRedo(){
@@ -31,6 +32,7 @@ public class UndoManager {
                 undo.push(new Pair<>(action.first, "highlight"));
                 break;
         }
+        MainActivity.update();
         return action;
     }
 
@@ -50,6 +52,7 @@ public class UndoManager {
                 redo.push(new Pair<>(action.first, "highlight"));
                 break;
         }
+        MainActivity.update();
         return action;
     }
 
